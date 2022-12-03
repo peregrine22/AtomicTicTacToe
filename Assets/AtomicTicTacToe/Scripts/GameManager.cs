@@ -1,6 +1,5 @@
 using System;
 using System.Linq;
-using System.Reflection;
 using UnityEngine;
 
 public static class TagTypes
@@ -17,7 +16,6 @@ enum GameResult {
 public class GameManager : MonoBehaviour
 {
     Board board;
-    Box[] boardBoxes;
 
     Mark currentMark;
 
@@ -31,7 +29,6 @@ public class GameManager : MonoBehaviour
     void Start()
     {
         board = GameObject.FindGameObjectWithTag("Board").GetComponent<Board>();
-        boardBoxes = board.GetBoardBoxes();
 
         isGameOver = false; 
         isBoardAvailable = true;
@@ -41,31 +38,21 @@ public class GameManager : MonoBehaviour
 
     void Update()
     {
-        if (!isGameOver)
+
+        if (!isGameOver && Input.GetMouseButtonDown(0))
         {
-            if (Input.GetMouseButtonDown(0))
+            Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+
+            RaycastHit hit;
+
+            if (Physics.Raycast(ray, out hit, 100))
             {
-                Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-                RaycastHit hit;
-                if (Physics.Raycast(ray, out hit, 100))
+                if (hit.transform.tag == TagTypes.BOARD_BOX)
                 {
-                    if (hit.transform.tag == TagTypes.BOARD_BOX)
-                    {
-                        MakeMove(hit.transform.GetComponent<Box>());
-                        var winner = CheckWinCondition();
-
-                        if (winner != null)
-                        {
-                            isGameOver = true;
-                        }
-
-                    }
+                    MakeMove(hit.transform.GetComponent<Box>());
                 }
-
-                currentMark = currentMark == Mark.X ? Mark.O : Mark.X;
-
-                NextTurn();
             }
+
         }
     }
 
@@ -75,13 +62,72 @@ public class GameManager : MonoBehaviour
         {
             box.SetAsMarked(currentMark == Mark.X ? playerX : playerO, currentMark);
 
-            isBoardAvailable = boardBoxes.Any(element => element.Mark == Mark.None);
+            isBoardAvailable = board.BoardBoxes.Any(element => element.Mark == Mark.None);
 
+            var winner = CheckWinCondition();
 
+            if (winner != null)
+            {
+                if (winner == 1)
+                {
+                    Debug.Log("winner is X");
+                }
+                else if (winner == -1)
+                {
+                    Debug.Log("winner is O");
+                }
+                else
+                {
+                    Debug.Log("Tie");
+                }
 
+                isGameOver = true;
+                return;
+            }
 
+            currentMark = currentMark == Mark.X ? Mark.O : Mark.X;
+
+            AutoTurn();
+        }
+    }
+
+    void AutoTurn()
+    {
+        Box[] availableBoxes = Array.FindAll(board.BoardBoxes, box => box.IsMarked == false);
+
+        System.Random rnd = new();
+
+        Box randomBox = availableBoxes[rnd.Next(1, availableBoxes.Length)];
+
+        randomBox.SetAsMarked(playerO, currentMark);
+
+        var winner = CheckWinCondition();
+
+        if (winner != null)
+        {
+            if (winner == 1)
+            {
+                Debug.Log("winner is X");
+            }
+            else if (winner == -1)
+            {
+                Debug.Log("winner is O");
+            }
+            else
+            {
+                Debug.Log("Tie");
+            }
+
+            isGameOver = true;
+            return;
         }
 
+        currentMark = currentMark == Mark.X ? Mark.O : Mark.X;
+    }
+
+    int Minimax(Box[] boardState, int depth, bool isMaximizing)
+    {
+        return 1;
     }
 
     int? CheckWinCondition()
@@ -109,37 +155,11 @@ public class GameManager : MonoBehaviour
 
     bool Equals3(int a, int b, int c)
     {
-        bool isEqualsToCurrentMark = 
-            boardBoxes[a].Mark == currentMark && 
-            boardBoxes[b].Mark == currentMark && 
-            boardBoxes[c].Mark == currentMark;
+        bool isEqualsToCurrentMark =
+            board.BoardBoxes[a].Mark == currentMark &&
+            board.BoardBoxes[b].Mark == currentMark &&
+            board.BoardBoxes[c].Mark == currentMark;
 
         return isEqualsToCurrentMark;
-    }
-
-    void NextTurn()
-    {
-        Debug.Log("Next turn");
-        Box[] availableBoxes = Array.FindAll(boardBoxes, box => box.IsMarked == false);
-
-        System.Random rnd = new();
-        Box randomBox = availableBoxes[rnd.Next(1, availableBoxes.Length)];
-
-        MakeMove(randomBox);
-
-        //randomBox.SetAsMarked(playerO, currentMark);
-        //if (CheckWinCondition())
-        //{
-        //    isGameOver = true;
-        //    return;
-        //}
-
-        //currentMark = currentMark == Mark.X ?
-        //Mark.O : Mark.X;
-    }
-
-    int Minimax(Box[] boardState, int depth, bool isMaximizing)
-    {
-        return 1;
     }
 }

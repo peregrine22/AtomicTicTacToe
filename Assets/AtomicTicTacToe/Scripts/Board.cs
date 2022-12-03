@@ -4,7 +4,7 @@ public class Board : MonoBehaviour
 {
     Box[] boardBoxes;
 
-    public Box[] GetBoardBoxes() { return boardBoxes; }
+    public Box[] BoardBoxes { get { return boardBoxes; } }
 
 
     private void Awake()
