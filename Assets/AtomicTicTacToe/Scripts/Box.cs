@@ -10,6 +10,8 @@ public class Box : MonoBehaviour
     public Mark Mark { get { return mark; } }
     public bool IsMarked { get { return isMarked; } }
 
+    GameObject occupyingPiece;
+
     private void Awake()
     {
         index = transform.GetSiblingIndex();
@@ -22,7 +24,15 @@ public class Box : MonoBehaviour
         isMarked = true;
         this.mark = mark;
 
-        Instantiate(playerPiece, transform.position, transform.rotation);
+        occupyingPiece = Instantiate(playerPiece, transform.position, transform.rotation);
         GetComponent<BoxCollider>().enabled = false;
+    }
+
+    public void Clear()
+    {
+        isMarked = false;
+        this.mark = Mark.None;
+        Destroy(occupyingPiece);
+        GetComponent<BoxCollider>().enabled = true;
     }
 }

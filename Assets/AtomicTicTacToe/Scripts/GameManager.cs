@@ -1,5 +1,8 @@
 using System;
 using System.Linq;
+using System.Collections.Generic;
+using System.Collections;
+
 using UnityEngine;
 
 public static class TagTypes
@@ -7,7 +10,8 @@ public static class TagTypes
     public const string BOARD_BOX = "BoardBox";
 }
 
-enum GameResult { 
+enum GameResult
+{
     TIE = 0,
     PLAYER_X_WON = 1,
     PLAYER_O_WON = -1
@@ -19,26 +23,31 @@ public class GameManager : MonoBehaviour
 
     Mark currentMark;
 
-    public GameObject playerX;
-    public GameObject playerO;
-    //public GameObject[] players;
-
     bool isGameOver;
-    bool isBoardAvailable;
+
+    public GameObject playerX;
+
+    public GameObject playerO;
+
+
+    readonly Dictionary<string, int> scores = new Dictionary<string, int>()
+    {
+        { "X", 1 },
+        { "O", -1 },
+        { "Tie", 0}
+    };
 
     void Start()
     {
         board = GameObject.FindGameObjectWithTag("Board").GetComponent<Board>();
 
-        isGameOver = false; 
-        isBoardAvailable = true;
+        isGameOver = false;
 
         currentMark = Mark.X;
     }
 
     void Update()
     {
-
         if (!isGameOver && Input.GetMouseButtonDown(0))
         {
             Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
@@ -47,119 +56,188 @@ public class GameManager : MonoBehaviour
 
             if (Physics.Raycast(ray, out hit, 100))
             {
-                if (hit.transform.tag == TagTypes.BOARD_BOX)
+                if (hit.transform.CompareTag(TagTypes.BOARD_BOX))
                 {
-                    MakeMove(hit.transform.GetComponent<Box>());
+                    var boxIndex = hit.transform.GetComponent<Box>().Index;
+
+                    MakeMove(boxIndex);
                 }
             }
 
         }
     }
 
-    void MakeMove(Box box)
+    void MakeMove(int boxIndex)
     {
-        if (!box.IsMarked)
+        if (!board.BoardBoxes[boxIndex].IsMarked)
         {
-            box.SetAsMarked(currentMark == Mark.X ? playerX : playerO, currentMark);
+            board.BoardBoxes[boxIndex].SetAsMarked(currentMark == Mark.X ? playerX : playerO, currentMark);
 
-            isBoardAvailable = board.BoardBoxes.Any(element => element.Mark == Mark.None);
-
-            var winner = CheckWinCondition();
+            String winner = CheckWinCondition(board);
 
             if (winner != null)
             {
-                if (winner == 1)
-                {
-                    Debug.Log("winner is X");
-                }
-                else if (winner == -1)
-                {
-                    Debug.Log("winner is O");
-                }
-                else
-                {
-                    Debug.Log("Tie");
-                }
+                Debug.Log(scores[winner]);
+
+                ShowWinnerScreen(winner);
 
                 isGameOver = true;
                 return;
             }
 
-            currentMark = currentMark == Mark.X ? Mark.O : Mark.X;
 
-            AutoTurn();
+            //TODO: Implement automatic mark switch
+            //currentMark = currentMark == Mark.X ? Mark.O : Mark.X;
+
+            AIMove();
         }
     }
 
-    void AutoTurn()
+    void AIMove()
     {
-        Box[] availableBoxes = Array.FindAll(board.BoardBoxes, box => box.IsMarked == false);
+        int bestScore = int.MaxValue;
 
-        System.Random rnd = new();
+        int bestMove = 0;
 
-        Box randomBox = availableBoxes[rnd.Next(1, availableBoxes.Length)];
+        foreach (Box box in board.BoardBoxes)
+        {
+            if (!box.IsMarked)
+            {
+                //board.BoardBoxes[i].SetAsMarked(currentMark == Mark.X ? playerX : playerO, currentMark);
+                box.SetAsMarked(playerO, Mark.O);
 
-        randomBox.SetAsMarked(playerO, currentMark);
+                int score = Minimax(board, 0, true);
 
-        var winner = CheckWinCondition();
+                Debug.Log(score);
+
+                box.Clear();
+
+                if (score < bestScore)
+                {
+                    bestScore = score;
+
+                    bestMove = box.Index;
+
+                    Debug.Log("bestScore after IF=> " + bestScore);
+                    Debug.Log("Box index => " + box.Index);
+                }
+            }
+        }
+
+        board.BoardBoxes[bestMove].SetAsMarked(playerO, Mark.O);
+    }
+
+    int Minimax(Board boardState, int depth, bool isMaximizing)
+    {
+        var winner = CheckWinCondition(boardState);
 
         if (winner != null)
         {
-            if (winner == 1)
-            {
-                Debug.Log("winner is X");
-            }
-            else if (winner == -1)
-            {
-                Debug.Log("winner is O");
-            }
-            else
-            {
-                Debug.Log("Tie");
-            }
-
-            isGameOver = true;
-            return;
+            return scores[winner];
         }
 
-        currentMark = currentMark == Mark.X ? Mark.O : Mark.X;
+        if (isMaximizing)
+        {
+            int bestScore = int.MinValue; // -Infinity
+
+            foreach (Box box in boardState.BoardBoxes)
+            {
+                if (!box.IsMarked)
+                {
+                    box.SetAsMarked(playerX, Mark.X);
+
+                    bestScore = Math.Max(bestScore, Minimax(boardState, depth + 1, !isMaximizing));
+
+                    box.Clear();
+                }
+            }
+
+            return bestScore;
+        }
+        else
+        {
+            int bestScore = int.MaxValue; // +Infinity
+
+            foreach (Box box in boardState.BoardBoxes)
+            {
+                if (!box.IsMarked)
+                {
+                    box.SetAsMarked(playerO, Mark.O);
+
+                    bestScore = Math.Min(bestScore, Minimax(boardState, depth + 1, !isMaximizing));
+
+                    box.Clear();
+                }
+            }
+
+            return bestScore;
+        }
     }
 
-    int Minimax(Box[] boardState, int depth, bool isMaximizing)
+    void ShowWinnerScreen(String winner)
     {
-        return 1;
+        switch (winner)
+        {
+            case "X":
+                Debug.Log("X won");
+                break;
+            case "O":
+                Debug.Log("O won");
+                break;
+            case "Tie":
+                Debug.Log("It's a tie!");
+                break;
+            default:
+                break;
+        }
     }
 
-    int? CheckWinCondition()
+    String CheckWinCondition(Board boardState)
     {
-        bool winner = Equals3(0, 1, 2)
-            || Equals3(0, 3, 6)
-            || Equals3(0, 4, 8)
-            || Equals3(3, 4, 5)
-            || Equals3(1, 4, 7)
-            || Equals3(2, 4, 6)
-            || Equals3(6, 7, 8)
-            || Equals3(2, 5, 8);
+        int boardSize = 3;
 
-        bool tie = !winner && !isBoardAvailable;
+        for (int i = 0; i < boardSize; i++)
+        {
+            if (Equals3((i * boardSize), (i * boardSize) + 1, (i * boardSize) + 2))
+            {
+                return boardState.BoardBoxes[i * boardSize].Mark.ToString();
+            }
+        }
 
-        if (winner && currentMark == Mark.X)
-            return 1;
-        if (winner && currentMark == Mark.O)
-            return -1;
-        if (tie)
-            return 0;
+        for (int i = 0; i < boardSize; i++)
+        {
+            if (Equals3(i, (1 * boardSize) + i, (2 * boardSize) + i))
+            {
+                return boardState.BoardBoxes[i].Mark.ToString();
+            }
+        }
+
+        if (Equals3(2, 4, 6))
+        {
+            return boardState.BoardBoxes[2].Mark.ToString();
+        }
+
+        if (Equals3(0, 4, 8))
+        {
+            return boardState.BoardBoxes[0].Mark.ToString();
+        }
+
+        if (!board.BoardBoxes.Any(box => box.Mark == Mark.None))
+        {
+            return "Tie";
+        }
 
         return null;
     }
 
     bool Equals3(int a, int b, int c)
     {
-        bool isEqualsToCurrentMark =
-            board.BoardBoxes[a].Mark == currentMark &&
-            board.BoardBoxes[b].Mark == currentMark &&
-            board.BoardBoxes[c].Mark == currentMark;
-
-        return isEqualsToCurrentMark;
+        //return board.BoardBoxes[a].Mark == currentMark &&
+        //board.BoardBoxes[b].Mark == currentMark &&
+        //board.BoardBoxes[c].Mark == currentMark;
+        return board.BoardBoxes[a].Mark != Mark.None &&
+            board.BoardBoxes[a].Mark == board.BoardBoxes[b].Mark &&
+            board.BoardBoxes[b].Mark == board.BoardBoxes[c].Mark &&
+            board.BoardBoxes[c].Mark == board.BoardBoxes[a].Mark;
     }
 }
