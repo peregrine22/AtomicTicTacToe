@@ -108,8 +108,6 @@ public class GameManager : MonoBehaviour
 
                 int score = Minimax(board, 0, true);
 
-                Debug.Log(score);
-
                 box.Clear();
 
                 if (score < bestScore)
@@ -117,14 +115,23 @@ public class GameManager : MonoBehaviour
                     bestScore = score;
 
                     bestMove = box.Index;
-
-                    Debug.Log("bestScore after IF=> " + bestScore);
-                    Debug.Log("Box index => " + box.Index);
                 }
             }
         }
 
         board.BoardBoxes[bestMove].SetAsMarked(playerO, Mark.O);
+
+        String winner = CheckWinCondition(board);
+
+        if (winner != null)
+        {
+            Debug.Log(scores[winner]);
+
+            ShowWinnerScreen(winner);
+
+            isGameOver = true;
+            return;
+        }
     }
 
     int Minimax(Board boardState, int depth, bool isMaximizing)
