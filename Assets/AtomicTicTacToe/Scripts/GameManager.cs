@@ -1,9 +1,8 @@
 using System;
 using System.Linq;
 using System.Collections.Generic;
-using System.Collections;
-
 using UnityEngine;
+using UnityEngine.VFX;
 
 public static class TagTypes
 {
@@ -29,6 +28,8 @@ public class GameManager : MonoBehaviour
 
     public GameObject playerO;
 
+    [SerializeField]
+    GameObject spawnParticle;
 
     readonly Dictionary<string, int> scores = new Dictionary<string, int>()
     {
@@ -72,6 +73,10 @@ public class GameManager : MonoBehaviour
         if (!board.BoardBoxes[boxIndex].IsMarked)
         {
             board.BoardBoxes[boxIndex].SetAsMarked(currentMark == Mark.X ? playerX : playerO, currentMark);
+            if (spawnParticle != null)
+            { 
+                Instantiate(spawnParticle, board.BoardBoxes[boxIndex].transform);
+            }
 
             String winner = CheckWinCondition(board);
 
