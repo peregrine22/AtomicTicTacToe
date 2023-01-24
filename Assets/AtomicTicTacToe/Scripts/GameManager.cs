@@ -3,6 +3,8 @@ using System.Linq;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.VFX;
+using System.Threading.Tasks;
+using System.Threading;
 
 public static class TagTypes
 {
@@ -29,7 +31,7 @@ public class GameManager : MonoBehaviour
     public GameObject playerO;
 
     [SerializeField]
-    GameObject spawnParticle;
+    VisualEffect spawnEffect;
 
     readonly Dictionary<string, int> scores = new Dictionary<string, int>()
     {
@@ -68,14 +70,14 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    void MakeMove(int boxIndex)
+    async void MakeMove(int boxIndex)
     {
         if (!board.BoardBoxes[boxIndex].IsMarked)
         {
             board.BoardBoxes[boxIndex].SetAsMarked(currentMark == Mark.X ? playerX : playerO, currentMark);
-            if (spawnParticle != null)
-            { 
-                Instantiate(spawnParticle, board.BoardBoxes[boxIndex].transform);
+            if (spawnEffect != null)
+            {
+                Instantiate(spawnEffect, board.BoardBoxes[boxIndex].transform);
             }
 
             String winner = CheckWinCondition(board);
@@ -90,16 +92,14 @@ public class GameManager : MonoBehaviour
                 return;
             }
 
-
-            //TODO: Implement automatic mark switch
-            //currentMark = currentMark == Mark.X ? Mark.O : Mark.X;
-
-            AIMove();
+            await AIMove();
         }
     }
 
-    void AIMove()
+    async Task AIMove()
     {
+        await Task.Delay(2000);
+
         int bestScore = int.MaxValue;
 
         int bestMove = 0;
@@ -108,7 +108,6 @@ public class GameManager : MonoBehaviour
         {
             if (!box.IsMarked)
             {
-                //board.BoardBoxes[i].SetAsMarked(currentMark == Mark.X ? playerX : playerO, currentMark);
                 box.SetAsMarked(playerO, Mark.O);
 
                 int score = Minimax(board, 0, true);
@@ -150,7 +149,7 @@ public class GameManager : MonoBehaviour
 
         if (isMaximizing)
         {
-            int bestScore = int.MinValue; // -Infinity
+            int bestScore = int.MinValue;
 
             foreach (Box box in boardState.BoardBoxes)
             {
@@ -168,7 +167,7 @@ public class GameManager : MonoBehaviour
         }
         else
         {
-            int bestScore = int.MaxValue; // +Infinity
+            int bestScore = int.MaxValue;
 
             foreach (Box box in boardState.BoardBoxes)
             {
@@ -244,9 +243,6 @@ public class GameManager : MonoBehaviour
 
     bool Equals3(int a, int b, int c)
     {
-        //return board.BoardBoxes[a].Mark == currentMark &&
-        //board.BoardBoxes[b].Mark == currentMark &&
-        //board.BoardBoxes[c].Mark == currentMark;
         return board.BoardBoxes[a].Mark != Mark.None &&
             board.BoardBoxes[a].Mark == board.BoardBoxes[b].Mark &&
             board.BoardBoxes[b].Mark == board.BoardBoxes[c].Mark &&
