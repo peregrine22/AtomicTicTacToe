@@ -3,8 +3,6 @@ using System.Linq;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.VFX;
-using System.Threading.Tasks;
-using System.Threading;
 
 public static class TagTypes
 {
@@ -20,18 +18,28 @@ enum GameResult
 
 public class GameManager : MonoBehaviour
 {
+    public enum PlayerType { Human, AI }
+
+    [SerializeField] 
+    GameObject playerX;
+
+    [SerializeField]
+    GameObject playerO;
+
+    [SerializeField]
+    VisualEffect spawnEffect;
+
+    [SerializeField]
+    public Canvas gameStateCanvas;
+
+    [SerializeField]
+    public TMPro.TMP_Text gameStateText;
+
     Board board;
 
     Mark currentMark;
 
     bool isGameOver;
-
-    public GameObject playerX;
-
-    public GameObject playerO;
-
-    [SerializeField]
-    VisualEffect spawnEffect;
 
     readonly Dictionary<string, int> scores = new Dictionary<string, int>()
     {
@@ -70,7 +78,7 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    async void MakeMove(int boxIndex)
+    void MakeMove(int boxIndex)
     {
         if (!board.BoardBoxes[boxIndex].IsMarked)
         {
@@ -92,13 +100,13 @@ public class GameManager : MonoBehaviour
                 return;
             }
 
-            await AIMove();
+            AIMove();
         }
     }
 
-    async Task AIMove()
+    void AIMove()
     {
-        await Task.Delay(2000);
+        //await Task.Delay(2000);
 
         int bestScore = int.MaxValue;
 
@@ -187,16 +195,17 @@ public class GameManager : MonoBehaviour
 
     void ShowWinnerScreen(String winner)
     {
+        gameStateCanvas.enabled = true;
         switch (winner)
         {
             case "X":
-                Debug.Log("X won");
+                gameStateText.text = "X WON!";
                 break;
             case "O":
-                Debug.Log("O won");
+                gameStateText.text = "O WON!";
                 break;
             case "Tie":
-                Debug.Log("It's a tie!");
+                gameStateText.text = "It'S A TIE!";
                 break;
             default:
                 break;

@@ -24,7 +24,7 @@ public class Box : MonoBehaviour
         isMarked = true;
         this.mark = mark;
 
-        occupyingPiece = Instantiate(playerPiece, transform.position, transform.rotation);
+        occupyingPiece = Instantiate(playerPiece, transform.position, Quaternion.identity);
         GetComponent<BoxCollider>().enabled = false;
     }
 
